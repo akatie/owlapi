@@ -32,7 +32,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -81,24 +80,24 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
     // this parser by hand. The error messages that this parser generates
     // are specific to the Manchester OWL Syntax and are such that it should
     // be easy to use this parser in tools such as editors.
-    @Nonnull private OWLOntologyLoaderConfiguration loaderConfig;
+    private OWLOntologyLoaderConfiguration loaderConfig;
     protected OWLDataFactory df;
-    private List<Token> tokens;
+    private final List<Token> tokens = new ArrayList<>();
     private int tokenIndex;
     private OWLEntityChecker checker;
     private OWLOntologyChecker owlOntologyChecker = name -> null;
     private final Map<ManchesterOWLSyntax, AnnAxiom<OWLClass, ?>> classFrameSections = new EnumMap<>(
         ManchesterOWLSyntax.class);
-    @Nonnull protected final Set<String> classNames = new HashSet<>();
-    @Nonnull protected final Set<String> objectPropertyNames = new HashSet<>();
-    @Nonnull protected final Set<String> dataPropertyNames = new HashSet<>();
-    @Nonnull protected final Set<String> individualNames = new HashSet<>();
-    @Nonnull protected final Set<String> dataTypeNames = new HashSet<>();
-    @Nonnull protected final Set<String> annotationPropertyNames = new HashSet<>();
-    @Nonnull private final Map<String, SWRLBuiltInsVocabulary> ruleBuiltIns = new TreeMap<>();
-    @Nonnull protected final DefaultPrefixManager pm = new DefaultPrefixManager();
-    @Nonnull protected final Set<ManchesterOWLSyntax> potentialKeywords = new HashSet<>();
-    private OWLOntology defaultOntology;
+    protected final Set<String> classNames = new HashSet<>();
+    protected final Set<String> objectPropertyNames = new HashSet<>();
+    protected final Set<String> dataPropertyNames = new HashSet<>();
+    protected final Set<String> individualNames = new HashSet<>();
+    protected final Set<String> dataTypeNames = new HashSet<>();
+    protected final Set<String> annotationPropertyNames = new HashSet<>();
+    private final Map<String, SWRLBuiltInsVocabulary> ruleBuiltIns = new TreeMap<>();
+    protected final DefaultPrefixManager pm = new DefaultPrefixManager();
+    protected final Set<ManchesterOWLSyntax> potentialKeywords = new HashSet<>();
+    @Nullable private OWLOntology defaultOntology;
     private static final boolean ALLOWEMPTYFRAMESECTIONS = false;
     private final Map<ManchesterOWLSyntax, AnnAxiom<OWLDataProperty, ?>> dataPropertyFrameSections = new EnumMap<>(
         ManchesterOWLSyntax.class);
@@ -157,9 +156,9 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
             ruleBuiltIns.put(v.getIRI().toQuotedString(), v);
         }
     }
-    
-    /**@return the prefix manager used by this parser*/
-    //XXX add this method to the interface in next release
+
+    /** @return the prefix manager used by this parser */
+    // XXX add this method to the interface in next release
     public PrefixManager getPrefixManager() {
         return pm;
     }
@@ -176,7 +175,7 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
 
     @Override
     public void setStringToParse(String s) {
-        tokens = new ArrayList<>();
+        tokens.clear();
         tokens.addAll(getTokenizer(s).tokenize());
         tokenIndex = 0;
     }
@@ -259,7 +258,7 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
     }
 
     private boolean isClassName(String name) {
-        return classNames.contains(name) || checker != null && checker.getOWLClass(name) != null;
+        return classNames.contains(name) || checker.getOWLClass(name) != null;
     }
 
     @Nullable
@@ -273,24 +272,23 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
     }
 
     private boolean isObjectPropertyName(String name) {
-        return objectPropertyNames.contains(name) || checker != null && checker.getOWLObjectProperty(name) != null;
+        return objectPropertyNames.contains(name) || checker.getOWLObjectProperty(name) != null;
     }
 
     private boolean isAnnotationPropertyName(String name) {
-        return annotationPropertyNames.contains(name) || checker != null && checker.getOWLAnnotationProperty(
-            name) != null;
+        return annotationPropertyNames.contains(name) || checker.getOWLAnnotationProperty(name) != null;
     }
 
     private boolean isDataPropertyName(String name) {
-        return dataPropertyNames.contains(name) || checker != null && checker.getOWLDataProperty(name) != null;
+        return dataPropertyNames.contains(name) || checker.getOWLDataProperty(name) != null;
     }
 
     private boolean isIndividualName(String name) {
-        return individualNames.contains(name) || checker != null && checker.getOWLIndividual(name) != null;
+        return individualNames.contains(name) || checker.getOWLIndividual(name) != null;
     }
 
     private boolean isDatatypeName(String name) {
-        return dataTypeNames.contains(name) || checker != null && checker.getOWLDatatype(name) != null;
+        return dataTypeNames.contains(name) || checker.getOWLDatatype(name) != null;
     }
 
     private boolean isSWRLBuiltin(String name) {
@@ -606,25 +604,25 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
         OWLDataPropertyExpression prop = parseDataProperty();
         String kw = consumeToken();
         if (SOME.matches(kw)) {
-            OWLDataRange rng = parseDataRange();
+            OWLDataRange rng = parseDataIntersectionOf(false);
             return df.getOWLDataSomeValuesFrom(prop, rng);
         } else if (ONLY.matches(kw)) {
-            OWLDataRange rng = parseDataRange();
+            OWLDataRange rng = parseDataIntersectionOf(false);
             return df.getOWLDataAllValuesFrom(prop, rng);
         } else if (VALUE.matches(kw)) {
             OWLLiteral con = parseLiteral(null);
             return df.getOWLDataHasValue(prop, con);
         } else if (MIN.matches(kw)) {
             int card = parseInteger();
-            OWLDataRange rng = parseDataRange();
+            OWLDataRange rng = parseDataIntersectionOf(true);
             return df.getOWLDataMinCardinality(card, prop, rng);
         } else if (EXACTLY.matches(kw)) {
             int card = parseInteger();
-            OWLDataRange rng = parseDataRange();
+            OWLDataRange rng = parseDataIntersectionOf(true);
             return df.getOWLDataExactCardinality(card, prop, rng);
         } else if (MAX.matches(kw)) {
             int card = parseInteger();
-            OWLDataRange rng = parseDataRange();
+            OWLDataRange rng = parseDataIntersectionOf(true);
             return df.getOWLDataMaxCardinality(card, prop, rng);
         }
         throw new ExceptionBuilder().withKeyword(SOME, ONLY, VALUE, MIN, EXACTLY, MAX).build();
@@ -657,14 +655,14 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
 
     @Override
     public OWLDataRange parseDataRange() {
-        return parseDataIntersectionOf();
+        return parseDataIntersectionOf(false);
     }
 
-    private OWLDataRange parseDataIntersectionOf() {
+    private OWLDataRange parseDataIntersectionOf(boolean lookaheadCheck) {
         String sep = AND.keyword();
         Set<OWLDataRange> ranges = new HashSet<>();
         while (AND.matches(sep)) {
-            ranges.add(parseDataUnionOf());
+            ranges.add(parseDataUnionOf(lookaheadCheck));
             sep = peekToken();
             if (AND.matches(sep)) {
                 consumeToken();
@@ -679,11 +677,11 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
         return df.getOWLDataIntersectionOf(ranges);
     }
 
-    private OWLDataRange parseDataUnionOf() {
+    private OWLDataRange parseDataUnionOf(boolean lookaheadCheck) {
         String sep = OR.keyword();
         Set<OWLDataRange> ranges = new HashSet<>();
         while (OR.matches(sep)) {
-            ranges.add(parseDataRangePrimary());
+            ranges.add(parseDataRangePrimary(lookaheadCheck));
             sep = peekToken();
             if (OR.matches(sep)) {
                 consumeToken();
@@ -696,7 +694,7 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
         }
     }
 
-    private OWLDataRange parseDataRangePrimary() {
+    private OWLDataRange parseDataRangePrimary(boolean lookaheadCheck) {
         String tok = peekToken();
         if (isDatatypeName(tok)) {
             consumeToken();
@@ -724,15 +722,28 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
                 return datatype;
             }
         } else if (NOT.matches(tok)) {
-            return parseDataComplementOf();
+            return parseDataComplementOf(false);
         } else if (OPENBRACE.matches(tok)) {
             return parseDataOneOf();
         } else if (OPEN.matches(tok)) {
             consumeToken();
-            OWLDataRange rng = parseDataRange();
+            OWLDataRange rng = parseDataIntersectionOf(false);
             consumeToken(CLOSE.keyword());
             return rng;
         } else {
+            // XXX problem: if the type is missing, we should return
+            // the top datatype. But there are many ways in which it could be
+            // missing.
+            // Hard to tell what sort of lookahead is needed.
+            // The next two checks should cover most cases.
+            for (ManchesterOWLSyntax x : values()) {
+                if (x.matches(tok)) {
+                    return df.getTopDatatype();
+                }
+            }
+            if (eof(tok) && lookaheadCheck) {
+                return df.getTopDatatype();
+            }
             consumeToken();
             throw new ExceptionBuilder().withDt().withKeyword(OPENBRACE, NOT).build();
         }
@@ -744,7 +755,7 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
         Set<OWLDataRange> ranges = new HashSet<>();
         while (COMMA.matches(sep)) {
             potentialKeywords.remove(COMMA);
-            OWLDataRange rng = parseDataRange();
+            OWLDataRange rng = parseDataIntersectionOf(false);
             ranges.add(rng);
             potentialKeywords.add(COMMA);
             sep = peekToken();
@@ -770,12 +781,12 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
         return df.getOWLDataOneOf(cons);
     }
 
-    private OWLDataRange parseDataComplementOf() {
+    private OWLDataRange parseDataComplementOf(boolean lookaheadCheck) {
         String not = consumeToken();
         if (!NOT.matches(not)) {
             throw new ExceptionBuilder().withKeyword(NOT).build();
         }
-        OWLDataRange complementedDataRange = parseDataRangePrimary();
+        OWLDataRange complementedDataRange = parseDataRangePrimary(lookaheadCheck);
         return df.getOWLDataComplementOf(complementedDataRange);
     }
 
@@ -1451,7 +1462,7 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
     }
 
     private SWRLAtom parseDataRangeAtom() {
-        OWLDataRange range = parseDataRange();
+        OWLDataRange range = parseDataIntersectionOf(false);
         consumeToken(OPEN.keyword());
         SWRLVariable obj1 = parseDVariable();
         consumeToken(CLOSE.keyword());
@@ -2117,7 +2128,7 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
         boolean annotationPropertyNameExpected = false;
         boolean integerExpected = false;
         Set<String> keywords = new HashSet<>();
-        List<String> tokenSequence;
+        @Nullable List<String> tokenSequence;
         int start = -1;
         int line = -1;
         int column = -1;
@@ -2227,9 +2238,9 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
                 line = lastToken.getRow();
                 column = lastToken.getCol();
             }
-            return new ParserException(tokenSequence, start, line, column, ontologyNameExpected, classNameExpected,
-                objectPropertyNameExpected, dataPropertyNameExpected, individualNameExpected, datatypeNameExpected,
-                annotationPropertyNameExpected, integerExpected, keywords);
+            return new ParserException(verifyNotNull(tokenSequence), start, line, column, ontologyNameExpected,
+                classNameExpected, objectPropertyNameExpected, dataPropertyNameExpected, individualNameExpected,
+                datatypeNameExpected, annotationPropertyNameExpected, integerExpected, keywords);
         }
     }
 
@@ -2389,22 +2400,22 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
         OWLDataPropertyExpression prop = parseDataProperty();
         String kw = consumeToken();
         if (SOME.matches(kw)) {
-            OWLDataRange dataRange = parseDataIntersectionOf();
+            OWLDataRange dataRange = parseDataIntersectionOf(false);
             return parseClassAxiomRemainder(df.getOWLDataSomeValuesFrom(prop, dataRange));
         } else if (ONLY.matches(kw)) {
-            OWLDataRange dataRange = parseDataIntersectionOf();
+            OWLDataRange dataRange = parseDataIntersectionOf(false);
             return parseClassAxiomRemainder(df.getOWLDataAllValuesFrom(prop, dataRange));
         } else if (MIN.matches(kw)) {
             int cardi = parseInteger();
-            OWLDataRange dataRange = parseDataIntersectionOf();
+            OWLDataRange dataRange = parseDataIntersectionOf(true);
             return parseClassAxiomRemainder(df.getOWLDataMinCardinality(cardi, prop, dataRange));
         } else if (MAX.matches(kw)) {
             int cardi = parseInteger();
-            OWLDataRange dataRange = parseDataIntersectionOf();
+            OWLDataRange dataRange = parseDataIntersectionOf(true);
             return parseClassAxiomRemainder(df.getOWLDataMaxCardinality(cardi, prop, dataRange));
         } else if (EXACTLY.matches(kw)) {
             int cardi = parseInteger();
-            OWLDataRange dataRange = parseDataIntersectionOf();
+            OWLDataRange dataRange = parseDataIntersectionOf(true);
             return parseClassAxiomRemainder(df.getOWLDataExactCardinality(cardi, prop, dataRange));
         } else if (SUB_PROPERTY_OF.matches(kw)) {
             OWLDataPropertyExpression superProperty = parseDataPropertyExpression();
@@ -2419,7 +2430,7 @@ public class ManchesterOWLSyntaxParserImpl implements ManchesterOWLSyntaxParser 
             OWLClassExpression domain = parseClassExpression();
             return df.getOWLDataPropertyDomainAxiom(prop, domain);
         } else if (RANGE.matches(kw)) {
-            OWLDataRange range = parseDataRange();
+            OWLDataRange range = parseDataIntersectionOf(true);
             return df.getOWLDataPropertyRangeAxiom(prop, range);
         } else {
             throw new ExceptionBuilder().withKeyword(SOME, ONLY, MIN, MAX, EXACTLY, SUB_PROPERTY_OF, EQUIVALENT_TO,
